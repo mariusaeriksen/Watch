@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	debug = flag.Bool("d", false, "Enable debugging output")
+	debug = flag.Bool("v", false, "Enable debugging output")
 	term  = flag.Bool("t", false, "Just run in the terminal (instead of an acme win)")
+	dir = flag.String("d", "", "Run in the given directory")
 )
 
 const rebuildDelay = 200 * time.Millisecond
@@ -43,13 +44,21 @@ func (w writerUi) rerun() <-chan struct{} {
 
 func main() {
 	flag.Parse()
-
-	watchPath := "."
+	
+	watchPath, err := os.Getwd()
+	if err != nil {
+		log.Fatalln("Can't get CWD: ", err)
+	}
+	if *dir == "" {
+		*dir = watchPath
+	}
+	
+	os.Chdir(*dir)
 
 	ui := ui(writerUi{os.Stdout, make(chan struct{})})
 	if !*term {
 		var err error
-		if ui, err = newWin(watchPath); err != nil {
+		if ui, err = newWin(*dir); err != nil {
 			log.Fatalln("Failed to open a win:", err)
 		}
 	}
